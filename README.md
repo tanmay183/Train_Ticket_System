@@ -1,8 +1,7 @@
-V1 
+After V1 
 
 All Data Saved permently
 dependency added in application.properties
-# Keep schema & data on restart
 spring.jpa.hibernate.ddl-auto=update
 
 #JDBC URL
