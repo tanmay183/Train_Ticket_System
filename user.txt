@@ -1,0 +1,1254 @@
+package com.tcs.User;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.openfeign.EnableFeignClients;
+
+@SpringBootApplication
+
+@EnableFeignClients
+public class UserApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(UserApplication.class, args);
+	}
+
+}
+......................................................................
+
+package com.tcs.User.config;
+
+
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.stereotype.Component;
+
+import com.tcs.User.model.User;
+import com.tcs.User.service.UserService;
+
+
+
+@Component
+public class CustomCommandLineRunner implements CommandLineRunner {
+	Logger logger = LoggerFactory.getLogger(getClass());
+
+	@Autowired
+	UserService userService;
+	@Override
+	public void run(String... args) throws Exception {
+		// TODO Auto-generated method stub
+//		logger.info("***********************************************");
+//		logger.info("CommandLineRunner User is working");
+//		logger.debug("hi this an error at the debug level");
+//
+//		User user1=new User("Aman Singh Paliwal", "aman@tcs.com", "Aman@123", "6/B K pocket ,Maroda Sector", "9691529354","Active");
+//		User user2=new User("Navpreet Singh Panesar", "navpreet@tcs.com", "Navpreet@123", "249 Mogra ,Talpuri", "7389766677","Inactive");
+//		User user3=new User("Deven Ram Khade", "deven@tcs.com", "Deven@123", "6/B K pocket ,Maroda Sector", "9691529354","Active");
+//		User user4=new User("Kaustubh Jagtap", "kaustubh@tcs.com", "Kaustubh@123", "249 Mogra ,Talpuri", "7389766677","Inactive");
+//		
+//		 
+//		this.userService.saveUser(user1);
+//		this.userService.saveUser(user2);
+//		this.userService.saveUser(user3);
+//		this.userService.saveUser(user4);
+//		
+//		logger.debug("all the User are saved");
+//		
+//		logger.info("***********************************************");
+//		
+//		//1/ read
+//		
+//		logger.debug("using findAll");
+//		
+//		List<User> ulist=userService.getUsers();
+//		logger.debug("{}",ulist);
+//		
+//		logger.info("***********************************************");
+//		
+//		logger.debug("using findById");
+//		
+//		User user = this.userService.getUser(1);
+//		logger.debug("{}",user);
+////		Train res = this.trainService.getTrain(1);
+////		logger.debug("{}",res);
+//				
+//		logger.info("***********************************************");
+//
+//		logger.info("*****CommandLineRunner User is Stop******************");
+//
+//		logger.info("***********************************************");
+		
+		
+		
+	
+	}
+}
+.......................................................................
+
+package com.tcs.User.config;
+
+
+public class EmailAlreadyRegisteredException extends RuntimeException {
+    public EmailAlreadyRegisteredException(String message) {
+        super(message);
+    }
+}
+.....................................................................
+package com.tcs.User.config;
+
+import java.util.Map;
+import java.util.*;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+
+    //@ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleUserNotFound(UserNotFoundException e) {
+        Map<String, String> res = new HashMap<>();
+        res.put("message", e.getMessage());
+        res.put("timestamp", new Date().toString());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(res);
+    }
+
+    //@ExceptionHandler(EmailAlreadyRegisteredException.class)
+    public ResponseEntity<Map<String, String>> handleEmailExists(EmailAlreadyRegisteredException e) {
+        Map<String, String> res = new HashMap<>();
+        res.put("message", e.getMessage());
+        res.put("timestamp", new Date().toString());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(res);
+    }
+
+    //@ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<Map<String, String>> handleInvalidCredentials(InvalidCredentialsException e) {
+        Map<String, String> res = new HashMap<>();
+        res.put("message", e.getMessage());
+        res.put("timestamp", new Date().toString());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(res);
+    }
+
+    //@ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, String>> handleGenericException(Exception e) {
+        Map<String, String> res = new HashMap<>();
+        res.put("message", "Unexpected error: " + e.getMessage());
+        res.put("timestamp", new Date().toString());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(res);
+    }
+}
+
+....................................................................
+package com.tcs.User.config;
+
+
+public class InvalidCredentialsException extends RuntimeException {
+    public InvalidCredentialsException(String message) {
+        super(message);
+    }
+}
+
+....................................................................
+package com.tcs.User.config;
+
+
+public class UserNotFoundException extends RuntimeException {
+    public UserNotFoundException(String message) {
+        super(message);
+    }
+}
+.....................................................................
+package com.tcs.User.controller;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin; // Import
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.tcs.User.DTO.BookTicketRequest;
+import com.tcs.User.DTO.FindTrainByRouteDTO;
+import com.tcs.User.config.EmailAlreadyRegisteredException;
+import com.tcs.User.model.Booking;
+import com.tcs.User.model.User;
+import com.tcs.User.service.BookingService;
+import com.tcs.User.service.TrainService;
+import com.tcs.User.service.UserService;
+
+@RestController
+@CrossOrigin(origins = "http://localhost:4200") // <<< Added CORS Configuration
+//@RequestMapping("/user") // Base path can be added if desired
+public class UserController {
+
+	@Autowired
+	UserService userService;
+	@Autowired
+	TrainService trainService;
+	@Autowired
+	BookingService bookingService;
+
+	//Note: VERIFY ENDPOINTS BEFORE USE.
+	
+	
+	@PostMapping("/registerUser")
+   	public ResponseEntity<User> registerUser(@RequestBody User user) { // Use @RequestBody for JSON
+        try {
+            User registeredUser = this.userService.registerUser(user);
+            return ResponseEntity.status(HttpStatus.CREATED).body(registeredUser);
+        } catch (EmailAlreadyRegisteredException e) {
+             return ResponseEntity.status(HttpStatus.CONFLICT).build(); // Or return error details
+        } catch (Exception e) {
+             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build(); // Or return error details
+        }
+   	}
+	
+	
+	@PostMapping("/login")
+   	public ResponseEntity<User> loginUser(@RequestParam("email") String email, @RequestParam("password") String password) { // Use @RequestBody for JSON
+        try {
+            User user = this.userService.loginUser(email, password);
+            return ResponseEntity.ok(user);
+        } catch (Exception e) {
+            // Consider more specific exception handling from service
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build(); // Or return error details
+        }
+   	}
+
+    
+	
+	@GetMapping("/getTrainsBetween")
+	public List<Object[]> getTrainsBetweenStations(FindTrainByRouteDTO findTrainByRouteDTO) {
+        return this.trainService.getTrainsBetweenStations(findTrainByRouteDTO);
+	}
+
+    @GetMapping("/getUsers")
+	public List<User> getUsers() {
+    	List<User> list=this.userService.getUsers();
+		return list;
+	}
+
+    
+    @PostMapping("/bookTicket")
+    public ResponseEntity<Booking> bookTicket(@RequestBody BookTicketRequest request) {
+         // This controller method might just act as a proxy if needed, or be removed
+         // if Angular calls Booking directly. For now, assuming it proxies.
+         return this.bookingService.BookTicket(request);
+    }
+
+    @GetMapping("/getUserById/{id}")
+   	public User getUserById(@PathVariable("id") int id) throws Exception  {
+       	return this.userService.getUser(id);
+   	}
+
+    
+    //update User record 
+     @PutMapping("/updateUser")
+     public ResponseEntity<User> updateUser(@RequestBody User user) { 
+    	 try {
+             User updateUser = this.userService.updateUser(user);
+             return ResponseEntity.status(HttpStatus.CREATED).body(updateUser);
+         } catch (EmailAlreadyRegisteredException e) {
+              return ResponseEntity.status(HttpStatus.CONFLICT).build(); // Or return error details
+         } catch (Exception e) {
+              return ResponseEntity.status(HttpStatus.BAD_REQUEST).build(); // Or return error details
+         }
+     }
+
+     @DeleteMapping("/deleteUser/{id}")
+     public void deleteUser(@PathVariable("id") int id)throws Exception {
+    	 this.userService.deleteUser(id);
+    	 
+     }
+}
+
+....................................................................
+
+package com.tcs.User.DTO;
+
+import java.util.List;
+
+import com.tcs.User.model.Passenger;
+
+
+public class BookingDTO {
+	private int bookingId;
+	private int userId;
+	private int trainNo;
+	private String trainName;
+	private String fromStation;
+	private String toStation;
+	private String startTime;
+	private String endTime;
+	private String journeyDate;
+	private String seatNumbers;
+	private String bookingDate;
+	private int price;
+	private List<Passenger> passengers;
+	
+	private String bookingStatus;
+
+	@Override
+	public String toString() {
+		return "BookingDTO [bookingId=" + bookingId + ", userId=" + userId + ", trainNo=" + trainNo + ", trainName="
+				+ trainName + ", fromStation=" + fromStation + ", toStation=" + toStation + ", startTime=" + startTime
+				+ ", endTime=" + endTime + ", journeyDate=" + journeyDate + ", seatNumbers=" + seatNumbers
+				+ ", bookingDate=" + bookingDate + ", price=" + price + ", passengers=" + passengers
+				+ ", bookingStatus=" + bookingStatus + "]";
+	}
+
+	public BookingDTO() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+
+	public int getBookingId() {
+		return bookingId;
+	}
+
+	public void setBookingId(int bookingId) {
+		this.bookingId = bookingId;
+	}
+
+	public int getUserId() {
+		return userId;
+	}
+
+	public void setUserId(int userId) {
+		this.userId = userId;
+	}
+
+	public int getTrainNo() {
+		return trainNo;
+	}
+
+	public void setTrainNo(int trainNo) {
+		this.trainNo = trainNo;
+	}
+
+	public String getTrainName() {
+		return trainName;
+	}
+
+	public void setTrainName(String trainName) {
+		this.trainName = trainName;
+	}
+
+	public String getFromStation() {
+		return fromStation;
+	}
+
+	public void setFromStation(String fromStation) {
+		this.fromStation = fromStation;
+	}
+
+	public String getToStation() {
+		return toStation;
+	}
+
+	public void setToStation(String toStation) {
+		this.toStation = toStation;
+	}
+
+	public String getStartTime() {
+		return startTime;
+	}
+
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+
+	public String getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+
+	public String getJourneyDate() {
+		return journeyDate;
+	}
+
+	public void setJourneyDate(String journeyDate) {
+		this.journeyDate = journeyDate;
+	}
+
+	public String getSeatNumbers() {
+		return seatNumbers;
+	}
+
+	public void setSeatNumbers(String seatNumbers) {
+		this.seatNumbers = seatNumbers;
+	}
+
+	public String getBookingDate() {
+		return bookingDate;
+	}
+
+	public void setBookingDate(String bookingDate) {
+		this.bookingDate = bookingDate;
+	}
+
+	public int getPrice() {
+		return price;
+	}
+
+	public void setPrice(int price) {
+		this.price = price;
+	}
+
+	public List<Passenger> getPassengers() {
+		return passengers;
+	}
+
+	public void setPassengers(List<Passenger> passengers) {
+		this.passengers = passengers;
+	}
+
+	public String getBookingStatus() {
+		return bookingStatus;
+	}
+
+	public void setBookingStatus(String bookingStatus) {
+		this.bookingStatus = bookingStatus;
+	}
+
+	public BookingDTO(int bookingId, int userId, int trainNo, String trainName, String fromStation, String toStation,
+			String startTime, String endTime, String journeyDate, String seatNumbers, String bookingDate, int price,
+			List<Passenger> passengers, String bookingStatus) {
+		super();
+		this.bookingId = bookingId;
+		this.userId = userId;
+		this.trainNo = trainNo;
+		this.trainName = trainName;
+		this.fromStation = fromStation;
+		this.toStation = toStation;
+		this.startTime = startTime;
+		this.endTime = endTime;
+		this.journeyDate = journeyDate;
+		this.seatNumbers = seatNumbers;
+		this.bookingDate = bookingDate;
+		this.price = price;
+		this.passengers = passengers;
+		this.bookingStatus = bookingStatus;
+	}
+
+	public BookingDTO(int userId, int trainNo, String trainName, String fromStation, String toStation, String startTime,
+			String endTime, String journeyDate, String seatNumbers, String bookingDate, int price,
+			List<Passenger> passengers, String bookingStatus) {
+		super();
+		this.userId = userId;
+		this.trainNo = trainNo;
+		this.trainName = trainName;
+		this.fromStation = fromStation;
+		this.toStation = toStation;
+		this.startTime = startTime;
+		this.endTime = endTime;
+		this.journeyDate = journeyDate;
+		this.seatNumbers = seatNumbers;
+		this.bookingDate = bookingDate;
+		this.price = price;
+		this.passengers = passengers;
+		this.bookingStatus = bookingStatus;
+	}
+	
+	
+
+
+
+	
+}
+....................................................................
+package com.tcs.User.DTO;
+
+import java.util.List;
+
+
+public class BookTicketRequest {
+
+    private int userId;
+    private int trainNo;
+    private String date;
+    private int acSeats;
+    private int slSeats;
+    private List<PassengerDTO> passengers;
+
+    // Getters and Setters
+
+    public int getUserId() {
+        return userId;
+    }
+
+    public void setUserId(int userId) {
+        this.userId = userId;
+    }
+
+    public int getTrainNo() {
+        return trainNo;
+    }
+
+    public void setTrainNo(int trainNo) {
+        this.trainNo = trainNo;
+    }
+
+    public String getDate() {
+        return date;
+    }
+
+    public void setDate(String date) {
+        this.date = date;
+    }
+
+    public int getAcSeats() {
+        return acSeats;
+    }
+
+    public void setAcSeats(int acSeats) {
+        this.acSeats = acSeats;
+    }
+
+    public int getSlSeats() {
+        return slSeats;
+    }
+
+    public void setSlSeats(int slSeats) {
+        this.slSeats = slSeats;
+    }
+
+    public List<PassengerDTO> getPassengers() {
+        return passengers;
+    }
+
+    public void setPassengers(List<PassengerDTO> passengers) {
+        this.passengers = passengers;
+    }
+}
+.....................................................................
+package com.tcs.User.DTO;
+
+public class FindTrainByRouteDTO {
+	private String source;
+	private String destination;
+	public String getSource() {
+		return source;
+	}
+	public void setSource(String source) {
+		this.source = source;
+	}
+	public String getDestination() {
+		return destination;
+	}
+	public void setDestination(String destination) {
+		this.destination = destination;
+	}
+	public FindTrainByRouteDTO() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+	
+	
+	
+}
+.....................................................................
+package com.tcs.User.DTO;
+
+public class LoginDTO {
+	private String email;
+	private String password;
+	public String getEmail() {
+		return email;
+	}
+	public void setEmail(String email) {
+		this.email = email;
+	}
+	public String getPassword() {
+		return password;
+	}
+	public void setPassword(String password) {
+		this.password = password;
+	}
+	public LoginDTO() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+	
+	
+}
+
+.....................................................................
+package com.tcs.User.DTO;
+
+
+public class PassengerDTO {
+	private int id;
+	private String name;
+	private int age;
+	private String gender;
+	public PassengerDTO() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+	public int getId() {
+		return id;
+	}
+	public void setId(int id) {
+		this.id = id;
+	}
+	public String getName() {
+		return name;
+	}
+	public void setName(String name) {
+		this.name = name;
+	}
+	public int getAge() {
+		return age;
+	}
+	public void setAge(int age) {
+		this.age = age;
+	}
+	public String getGender() {
+		return gender;
+	}
+	public void setGender(String gender) {
+		this.gender = gender;
+	}
+	public PassengerDTO(int id, String name, int age, String gender) {
+		super();
+		this.id = id;
+		this.name = name;
+		this.age = age;
+		this.gender = gender;
+	}
+	public PassengerDTO(String name, int age, String gender) {
+		super();
+		this.name = name;
+		this.age = age;
+		this.gender = gender;
+	}
+	
+	
+	
+	
+}
+.....................................................................
+package com.tcs.User.DTO;
+
+import java.util.List;
+
+import com.tcs.User.model.Booking;
+
+
+
+public class UserDTO {
+	private int userId;
+	private String userName;
+	private String email;
+	
+	private List<Booking> bookings;
+
+	@Override
+	public String toString() {
+		return "UserDTO [userId=" + userId + ", userName=" + userName + ", email=" + email + ", bookings=" + bookings
+				+ "]";
+	}
+
+	public UserDTO() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+
+	public int getUserId() {
+		return userId;
+	}
+
+	public void setUserId(int userId) {
+		this.userId = userId;
+	}
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+	public List<Booking> getBookings() {
+		return bookings;
+	}
+
+	public void setBookings(List<Booking> bookings) {
+		this.bookings = bookings;
+	}
+
+	public UserDTO(int userId, String userName, String email, List<Booking> bookings) {
+		super();
+		this.userId = userId;
+		this.userName = userName;
+		this.email = email;
+		this.bookings = bookings;
+	}
+
+	public UserDTO(String userName, String email, List<Booking> bookings) {
+		super();
+		this.userName = userName;
+		this.email = email;
+		this.bookings = bookings;
+	}
+
+	
+	
+}
+.....................................................................
+package com.tcs.User.model;
+
+public class Booking {
+	private int bookingId;
+	private int userId;
+	private int trainNo;
+	private String trainName;
+	private String fromStation;
+	private String toStation;
+	private String startTime;
+	private String endTime;
+	private String journeyDate;
+	private String seatNumbers;
+	private String bookingDate;
+	private int price;
+	private String bookingStatus;
+	
+	
+	
+	public Booking(){}
+
+	@Override
+	public String toString() {
+		return "Booking [bookingId=" + bookingId + ", userId=" + userId + ", trainNo=" + trainNo + ", trainName="
+				+ trainName + ", fromStation=" + fromStation + ", toStation=" + toStation + ", startTime=" + startTime + ", endTime=" + endTime
+				+ ", journeyDate=" + journeyDate + ", seatNumbers=" + seatNumbers + ", bookingDate=" + bookingDate
+				+ ", price=" + price + ", bookingStatus=" + bookingStatus + "]";
+	}
+
+	public int getBookingId() {
+		return bookingId;
+	}
+
+	public void setBookingId(int bookingId) {
+		this.bookingId = bookingId;
+	}
+
+	public int getUserId() {
+		return userId;
+	}
+
+	public void setUserId(int userId) {
+		this.userId = userId;
+	}
+
+	public int getTrainNo() {
+		return trainNo;
+	}
+
+	public void setTrainNo(int trainNo) {
+		this.trainNo = trainNo;
+	}
+
+	public String getTrainName() {
+		return trainName;
+	}
+
+	public void setTrainName(String trainName) {
+		this.trainName = trainName;
+	}
+
+	public String getFromStation() {
+		return fromStation;
+	}
+
+	public void setFromStation(String fromStation) {
+		this.fromStation = fromStation;
+	}
+
+	public String getToStation() {
+		return toStation;
+	}
+
+	public void setToStation(String toStation) {
+		this.toStation = toStation;
+	}
+
+	public String getStartTime() {
+		return startTime;
+	}
+
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+
+	public String getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+
+	public String getJourneyDate() {
+		return journeyDate;
+	}
+
+	public void setJourneyDate(String journeyDate) {
+		this.journeyDate = journeyDate;
+	}
+
+	public String getSeatNumbers() {
+		return seatNumbers;
+	}
+
+	public void setSeatNumbers(String seatNumbers) {
+		this.seatNumbers = seatNumbers;
+	}
+
+	public String getBookingDate() {
+		return bookingDate;
+	}
+
+	public void setBookingDate(String bookingDate) {
+		this.bookingDate = bookingDate;
+	}
+
+	public int getPrice() {
+		return price;
+	}
+
+	public void setPrice(int price) {
+		this.price = price;
+	}
+
+	public String getBookingStatus() {
+		return bookingStatus;
+	}
+
+	public void setBookingStatus(String bookingStatus) {
+		this.bookingStatus = bookingStatus;
+	}
+
+	public Booking(int bookingId, int userId, int trainNo, String trainName, String fromStation, String toStation, String startTime,
+			String endTime, String journeyDate, String seatNumbers, String bookingDate, int price,
+			String bookingStatus) {
+		super();
+		this.bookingId = bookingId;
+		this.userId = userId;
+		this.trainNo = trainNo;
+		this.trainName = trainName;
+		this.fromStation = fromStation;
+		this.toStation = toStation;
+		this.startTime = startTime;
+		this.endTime = endTime;
+		this.journeyDate = journeyDate;
+		this.seatNumbers = seatNumbers;
+		this.bookingDate = bookingDate;
+		this.price = price;
+		this.bookingStatus = bookingStatus;
+	}
+
+	public Booking(int userId, int trainNo, String trainName, String fromStation, String toStation, String startTime, String endTime,
+			String journeyDate, String seatNumbers, String bookingDate, int price, String bookingStatus) {
+		super();
+		this.userId = userId;
+		this.trainNo = trainNo;
+		this.trainName = trainName;
+		this.fromStation = fromStation;
+		this.toStation = toStation;
+		this.startTime = startTime;
+		this.endTime = endTime;
+		this.journeyDate = journeyDate;
+		this.seatNumbers = seatNumbers;
+		this.bookingDate = bookingDate;
+		this.price = price;
+		this.bookingStatus = bookingStatus;
+	}
+	
+}
+......................................................................
+package com.tcs.User.model;
+
+public class Passenger {
+	private int id;
+	private int bookingId;
+	private String SeatNumber;
+	private String name;
+	private int age;
+	private String gender;
+	
+	public Passenger() {}
+
+	public int getId() {
+		return id;
+	}
+
+	public void setId(int id) {
+		this.id = id;
+	}
+
+	public int getBookingId() {
+		return bookingId;
+	}
+
+	public void setBookingId(int bookingId) {
+		this.bookingId = bookingId;
+	}
+
+	public String getSeatNumber() {
+		return SeatNumber;
+	}
+
+	public void setSeatNumber(String seatNumber) {
+		SeatNumber = seatNumber;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public int getAge() {
+		return age;
+	}
+
+	public void setAge(int age) {
+		this.age = age;
+	}
+
+	public String getGender() {
+		return gender;
+	}
+
+	public void setGender(String gender) {
+		this.gender = gender;
+	}
+
+	public Passenger(int id, int bookingId, String seatNumber, String name, int age, String gender) {
+		super();
+		this.id = id;
+		this.bookingId = bookingId;
+		SeatNumber = seatNumber;
+		this.name = name;
+		this.age = age;
+		this.gender = gender;
+	}
+
+	public Passenger(int bookingId, String seatNumber, String name, int age, String gender) {
+		super();
+		this.bookingId = bookingId;
+		SeatNumber = seatNumber;
+		this.name = name;
+		this.age = age;
+		this.gender = gender;
+	}
+
+	@Override
+	public String toString() {
+		return "Passenger [id=" + id + ", bookingId=" + bookingId + ", SeatNumber=" + SeatNumber + ", name=" + name
+				+ ", age=" + age + ", gender=" + gender + "]";
+	}
+
+	
+}
+......................................................................
+package com.tcs.User.model;
+
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+
+@Entity(name="user_pbl")
+public class User {
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private int userId;
+	@Column(nullable = false)
+	private String userName;
+	@Column(unique = true, nullable = false)
+	private String email;
+	@Column(nullable = false)
+	private String password;
+	@Column(nullable = false)
+	private String address;
+	@Column(nullable = false)
+	private String contact;
+	@Column(nullable = false)
+	private String type;
+	
+	public User() {}
+	
+	public User(String userName, String email, String password, String address, String contact,String type) {
+		super();
+		this.userName = userName;
+		this.email = email;
+		this.password = password;
+		this.address = address;
+		this.contact = contact;
+		this.type=type;
+	}
+	public User(int userId, String userName, String email, String password, String address, String contact,String type) {
+		super();
+		this.userId = userId;
+		this.userName = userName;
+		this.email = email;
+		this.password = password;
+		this.address = address;
+		this.contact = contact;
+		this.type=type;
+	}
+	
+	
+	
+	@Override
+	public String toString() {
+		return "User [userId=" + userId + ", userName=" + userName + ", email=" + email + ", password=" + password
+				+ ", address=" + address + ", contact=" + contact + ", type=" + type + "]";
+	}
+
+	public int getUserId() {
+		return userId;
+	}
+	public void setUserId(int userId) {
+		this.userId = userId;
+	}
+	public String getUserName() {
+		return userName;
+	}
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+	public String getEmail() {
+		return email;
+	}
+	public void setEmail(String email) {
+		this.email = email;
+	}
+	public String getPassword() {
+		return password;
+	}
+	public void setPassword(String password) {
+		this.password = password;
+	}
+	public String getAddress() {
+		return address;
+	}
+	public void setAddress(String address) {
+		this.address = address;
+	}
+	public String getContact() {
+		return contact;
+	}
+	public void setContact(String contact) {
+		this.contact = contact;
+	}
+
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
+	
+	
+	
+	
+}
+.....................................................................
+package com.tcs.User.repository;
+
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import com.tcs.User.model.User;
+@Repository
+public interface  UserRepository extends JpaRepository<User, Integer>{
+
+	 @Query(value = "SELECT * from user_pbl u where u.email= :email AND u.password= :password",
+     nativeQuery = true)
+     User loginUser(
+     @Param("email") String originStationName,
+     @Param("password") String destinationStationName );
+	
+	 @Query(value = "SELECT email from user_pbl u where u.email= :email",
+		    nativeQuery = true)
+		  String check(
+		     @Param("email") String originStationName);
+		     
+}
+.....................................................................
+package com.tcs.User.service;
+
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import com.tcs.User.DTO.BookTicketRequest;
+import com.tcs.User.DTO.UserDTO;
+import com.tcs.User.model.Booking;
+
+
+@FeignClient(name="Booking",url="http://localhost:8100")
+public interface BookingService {
+	@PostMapping("/bookTicket")
+    public ResponseEntity<Booking> BookTicket(@RequestBody BookTicketRequest request);
+
+	@GetMapping("/getAllBookingsOfUser")
+	public UserDTO getAllBookingsOfUser(@RequestParam("userId") int userId);
+}
+
+
+......................................................................
+package com.tcs.User.service;
+
+import java.util.List;
+
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+
+import com.tcs.User.DTO.FindTrainByRouteDTO;
+
+
+
+@FeignClient(name="ADMIN",url="http://localhost:8102")//port address of bill
+public interface TrainService {
+	@GetMapping("/getTrainsBetween")
+	public List<Object[]> getTrainsBetweenStations(FindTrainByRouteDTO findTrainByRouteDTO);
+
+}
+.....................................................................
+package com.tcs.User.service;
+
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.tcs.User.config.EmailAlreadyRegisteredException;
+import com.tcs.User.config.InvalidCredentialsException;
+import com.tcs.User.config.UserNotFoundException;
+import com.tcs.User.model.User;
+import com.tcs.User.repository.UserRepository;
+
+@Service
+public class UserService {
+
+	@Autowired
+	private UserRepository userRepository;
+	
+	Logger logger = LoggerFactory.getLogger(getClass());
+	// findbyId
+	public User getUser(int id) throws Exception {
+		User output = this.userRepository.findById(id).orElseThrow(() -> new Exception("please give correct id"));
+		return output;
+	}
+
+	// insert user
+	public User saveUser(User user) {
+		return this.userRepository.save(user);
+	}
+	
+	public User updateUser(User user) {
+		if(user.getPassword() == null) {
+			User tempUser = this.userRepository.findById(user.getUserId()).orElseThrow(() -> new InvalidCredentialsException("Please check the ID"));
+			user.setPassword(tempUser.getPassword());			
+		}		
+
+		return this.userRepository.save(user);
+	}
+
+	// find all users
+	public List<User> getUsers()  throws UserNotFoundException {
+		List<User> op =this.userRepository.findAll();
+		if(op == null) {
+			throw new UserNotFoundException("No User In Database");
+		}
+		return op;
+	}
+
+
+	 // Login user
+    public User loginUser(String email, String password) {
+        User user = this.userRepository.loginUser(email, password);
+        if (user == null) {
+            throw new InvalidCredentialsException("Invalid email or password.");
+        }
+        return user;
+    }
+
+	
+	public User registerUser(User user) {
+        String existingEmail = this.userRepository.check(user.getEmail());
+        if (existingEmail != null) {
+            throw new EmailAlreadyRegisteredException("Email is already registered.");
+        }
+        return this.userRepository.save(user);
+    }
+	
+	public void deleteUser(int id) {
+	    User user = userRepository.findById(id).orElse(null);
+	    if (user != null) {
+	        userRepository.delete(user);
+	    }
+	} 
+
+}
+.....................................................................
+spring.application.name=User
+
+
+spring.h2.console.enabled=true
+
+spring.datasource.url= jdbc:h2:mem:userDB
+
+logging.level.com.tcs.User = DEBUG
+
+server.port=8101
+server.error.include-stacktrace=never
+#add config to register to the eureka server
+eureka.instance.prefer-ip-address=false
+eureka.client.register-with-eureka=true
+eureka.client.service-url.defaultzone = http://localhost:8761/eureka

@@ -1,0 +1,1535 @@
+package com.tcs.Booking;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.openfeign.EnableFeignClients;
+
+@SpringBootApplication
+@EnableFeignClients
+public class BookingApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(BookingApplication.class, args);
+	}
+
+}
+.....................................................................
+package com.tcs.Booking.config;
+
+public class BookingException extends RuntimeException {
+    public BookingException(String message) {
+        super(message);
+    }
+}
+.....................................................................
+package com.tcs.Booking.config;
+
+
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.stereotype.Component;
+
+import com.tcs.Booking.DTO.BookingDTO;
+import com.tcs.Booking.DTO.UserDTO;
+import com.tcs.Booking.model.Booking;
+import com.tcs.Booking.service.BookingService;
+
+
+@Component
+public class CustomCommandLineRunner  implements CommandLineRunner {
+Logger logger = LoggerFactory.getLogger(getClass());
+//	
+//	@Autowired
+//	TicketService ticketService; 
+
+@Autowired
+BookingService bookingService;
+	@Override
+	public void run(String... args) throws Exception {
+		// TODO Auto-generated method stub
+		
+//		logger.info("***********************************************");
+//		logger.info("CommandLineRunner is working");
+//		logger.debug("hi this an error at the debug level");
+//	
+//		try {
+//			
+//			//this.bookingService.BookTicket(4, 10894, "25/01/2025", 4, 3);
+//			
+//			 
+//			logger.debug("all the booking are saved");
+//		} catch (Exception e) {
+//			logger.error("Error custome booking is not working ",e);
+//		}
+//		 
+//		logger.info("***********************************************");
+//		
+//		logger.debug("using findAll");
+//		
+//		List<Booking> bookings = this.bookingService.getBookings();
+//		logger.debug("{}",bookings);
+//		
+//		
+//		logger.info("***********************************************");
+//		logger.info("***********************************************");
+//		
+//
+//		logger.info("***********************************************");
+		
+		
+		
+	
+	}
+
+}
+.....................................................................
+package com.tcs.Booking.config;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+
+@RestControllerAdvice
+public class GlobalAdvice {
+	public ResponseEntity<Map<String,String>>NoTicketFoundException(NoTicketFoundException e){
+		Map<String,String> res = new HashMap<String,String>();
+		res.put("message", e.getMessage());
+		res.put("date", new Date().toString());
+		
+		return ResponseEntity.status(HttpStatus.NOT_FOUND).body(res);
+		
+	}
+	public ResponseEntity<Map<String, String>> handleResourceNotFound(ResourceNotFoundException e) {
+        Map<String, String> res = new HashMap<>();
+        res.put("message", e.getMessage());
+        res.put("timestamp", new Date().toString());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(res);
+    }
+
+    
+    public ResponseEntity<Map<String, String>> handleBookingException(BookingException e) {
+        Map<String, String> res = new HashMap<>();
+        res.put("message", e.getMessage());
+        res.put("timestamp", new Date().toString());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(res);
+    }
+
+    public ResponseEntity<Map<String, String>> handleGenericException(Exception e) {
+        Map<String, String> res = new HashMap<>();
+        res.put("message", "Internal Server Error: " + e.getMessage());
+        res.put("timestamp", new Date().toString());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(res);
+    }
+}
+.....................................................................
+package com.tcs.Booking.config;
+
+public class NoTicketFoundException extends RuntimeException {
+	public NoTicketFoundException(String message) {
+		super(message);
+	}
+
+}
+....................................................................
+package com.tcs.Booking.config;
+
+public class ResourceNotFoundException extends RuntimeException {
+    public ResourceNotFoundException(String message) {
+        super(message);
+    }
+}
+....................................................................
+package com.tcs.Booking.controller;
+
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin; // Import
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.tcs.Booking.DTO.BookTicketRequest;
+import com.tcs.Booking.DTO.BookingDTO;
+import com.tcs.Booking.DTO.UserDTO;
+import com.tcs.Booking.config.BookingException; // Import custom exceptions
+import com.tcs.Booking.config.ResourceNotFoundException; // Import custom exceptions
+import com.tcs.Booking.model.Booking;
+import com.tcs.Booking.service.BookingService;
+
+@RestController
+@CrossOrigin(origins = "http://localhost:4200") // <<< Added CORS Configuration
+public class BookingController {
+
+	Logger logger = LoggerFactory.getLogger(getClass());
+
+	@Autowired
+	BookingService bookingService;
+	
+	
+
+	@PostMapping("/cancelBooking/{id}")
+	public ResponseEntity<String> cancelBooking(@PathVariable("id") int bookingId) {
+	    try {
+	        bookingService.cancelBooking(bookingId);
+	        return new ResponseEntity<>("Booking cancelled successfully", HttpStatus.OK);
+	    } catch (Exception e) {
+	        return new ResponseEntity<>("Cancellation failed: " + e.getMessage(), HttpStatus.BAD_REQUEST);
+	    }
+	}
+
+
+	@PostMapping("/bookTicket")
+	public ResponseEntity<?> BookTicket(@RequestBody BookTicketRequest request) { // Return ResponseEntity<?> for better error handling
+		try {
+			Booking booking = this.bookingService.BookTicket(
+                request.getUserId(),
+                request.getTrainNo(),
+				request.getDate(),
+                request.getAcSeats(),
+                request.getSlSeats(),
+                request.getPassengers()
+            );
+			return new ResponseEntity<>(booking, HttpStatus.CREATED);
+        } catch (ResourceNotFoundException e) {
+            logger.error("Booking failed - Resource not found: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+		} catch (BookingException e) {
+            logger.error("Booking failed - Booking error: {}", e.getMessage());
+             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+		} catch (Exception e) { // Catch broader exceptions from Feign calls etc.
+             logger.error("Booking failed - Unexpected error: {}", e.getMessage(), e);
+             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred during booking.");
+		}
+	}
+
+	@GetMapping("/getBookings")
+	public List<Booking> getBookings() {
+		List<Booking> list = this.bookingService.getBookings();
+		return list;
+	}
+
+	@GetMapping("/getBooking/{id}")
+	public ResponseEntity<?> getBooking(@PathVariable("id") int id) { // Use ResponseEntity
+        try {
+            BookingDTO bookingDTO = this.bookingService.getBooking(id);
+            return ResponseEntity.ok(bookingDTO);
+        } catch (ResourceNotFoundException e) {
+            logger.error("Get booking failed - Resource not found: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (Exception e) {
+             logger.error("Get booking failed - Unexpected error: {}", e.getMessage(), e);
+             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred.");
+        }
+	}
+
+	@GetMapping("/getAllBookingsOfUser/{userId}")
+	public ResponseEntity<?> getAllBookingsOfUser(@PathVariable("userId") int userId) { // Use ResponseEntity
+         try {
+            UserDTO userDTO = this.bookingService.getAllBookingsOfUser(userId);
+            return ResponseEntity.ok(userDTO);
+        } catch (ResourceNotFoundException e) {
+            logger.error("Get user bookings failed - Resource not found: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (Exception e) {
+             logger.error("Get user bookings failed - Unexpected error: {}", e.getMessage(), e);
+             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred.");
+        }
+	}
+	
+	
+
+}
+....................................................................
+package com.tcs.Booking.DTO;
+
+import java.util.List;
+
+import com.tcs.Booking.model.Passenger;
+import com.tcs.Booking.model.User;
+
+public class BookingDTO {
+	private int userId;
+	private int trainNo;
+	private String trainName;
+	private String fromStation;
+	private String toStation;
+	private String startTime;
+	private String endTime;
+	private String journeyDate;
+	private String seatNumbers;
+	private String bookingDate;
+	private int price;
+	
+	private List<Passenger> passengers;
+	
+	private String bookingStatus;
+	private User user;
+	
+
+	@Override
+	public String toString() {
+		return "BookingDTO [userId=" + userId + ", trainNo=" + trainNo + ", trainName=" + trainName + ", fromStation="
+				+ fromStation + ", toStation=" + toStation + ", startTime=" + startTime + ", endTime=" + endTime
+				+ ", journeyDate=" + journeyDate + ", seatNumbers=" + seatNumbers + ", bookingDate=" + bookingDate
+				+ ", price=" + price + ", passengers=" + passengers + ", bookingStatus=" + bookingStatus + "]";
+	}
+
+
+	public BookingDTO() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+
+
+	public int getUserId() {
+		return userId;
+	}
+
+	public void setUserId(int userId) {
+		this.userId = userId;
+	}
+
+	public int getTrainNo() {
+		return trainNo;
+	}
+
+	public void setTrainNo(int trainNo) {
+		this.trainNo = trainNo;
+	}
+
+	public String getTrainName() {
+		return trainName;
+	}
+
+	public void setTrainName(String trainName) {
+		this.trainName = trainName;
+	}
+
+	public String getFromStation() {
+		return fromStation;
+	}
+
+	public void setFromStation(String fromStation) {
+		this.fromStation = fromStation;
+	}
+
+	public String getToStation() {
+		return toStation;
+	}
+
+	public void setToStation(String toStation) {
+		this.toStation = toStation;
+	}
+
+	public String getStartTime() {
+		return startTime;
+	}
+
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+
+	public String getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+
+	public String getJourneyDate() {
+		return journeyDate;
+	}
+
+	public void setJourneyDate(String journeyDate) {
+		this.journeyDate = journeyDate;
+	}
+
+	public String getSeatNumbers() {
+		return seatNumbers;
+	}
+
+	public void setSeatNumbers(String seatNumbers) {
+		this.seatNumbers = seatNumbers;
+	}
+
+	public String getBookingDate() {
+		return bookingDate;
+	}
+
+	public void setBookingDate(String bookingDate) {
+		this.bookingDate = bookingDate;
+	}
+
+	public int getPrice() {
+		return price;
+	}
+
+	public void setPrice(int price) {
+		this.price = price;
+	}
+
+	public List<Passenger> getPassengers() {
+		return passengers;
+	}
+
+	public void setPassengers(List<Passenger> passengers) {
+		this.passengers = passengers;
+	}
+
+	public String getBookingStatus() {
+		return bookingStatus;
+	}
+
+	public void setBookingStatus(String bookingStatus) {
+		this.bookingStatus = bookingStatus;
+	}
+
+	public User getUser() {
+		return user;
+	}
+
+
+	public void setUser(User user) {
+		this.user = user;
+	}
+
+
+	public BookingDTO( int userId, int trainNo, String trainName, String fromStation, String toStation,
+			String startTime, String endTime, String journeyDate, String seatNumbers, String bookingDate, int price,
+			List<Passenger> passengers, String bookingStatus) {
+		super();
+		this.userId = userId;
+		this.trainNo = trainNo;
+		this.trainName = trainName;
+		this.fromStation = fromStation;
+		this.toStation = toStation;
+		this.startTime = startTime;
+		this.endTime = endTime;
+		this.journeyDate = journeyDate;
+		this.seatNumbers = seatNumbers;
+		this.bookingDate = bookingDate;
+		this.price = price;
+		this.passengers = passengers;
+		this.bookingStatus = bookingStatus;
+	}
+
+	
+	//private User user;
+
+
+
+	
+}
+....................................................................
+package com.tcs.Booking.DTO;
+
+import java.util.List;
+
+public class BookTicketRequest {
+
+    private int userId;
+    private int trainNo;
+    private String date;
+    private int acSeats;
+    private int slSeats;
+    private List<PassengerDTO> passengers;
+
+    // Getters and Setters
+
+    public int getUserId() {
+        return userId;
+    }
+
+    public void setUserId(int userId) {
+        this.userId = userId;
+    }
+
+    public int getTrainNo() {
+        return trainNo;
+    }
+
+    public void setTrainNo(int trainNo) {
+        this.trainNo = trainNo;
+    }
+
+    public String getDate() {
+        return date;
+    }
+
+    public void setDate(String date) {
+        this.date = date;
+    }
+
+    public int getAcSeats() {
+        return acSeats;
+    }
+
+    public void setAcSeats(int acSeats) {
+        this.acSeats = acSeats;
+    }
+
+    public int getSlSeats() {
+        return slSeats;
+    }
+
+    public void setSlSeats(int slSeats) {
+        this.slSeats = slSeats;
+    }
+
+    public List<PassengerDTO> getPassengers() {
+        return passengers;
+    }
+
+    public void setPassengers(List<PassengerDTO> passengers) {
+        this.passengers = passengers;
+    }
+
+	public BookTicketRequest(int userId, int trainNo, String date, int acSeats, int slSeats,
+			List<PassengerDTO> passengers) {
+		super();
+		this.userId = userId;
+		this.trainNo = trainNo;
+		this.date = date;
+		this.acSeats = acSeats;
+		this.slSeats = slSeats;
+		this.passengers = passengers;
+	}
+
+	public BookTicketRequest(int trainNo, String date, int acSeats, int slSeats, List<PassengerDTO> passengers) {
+		super();
+		this.trainNo = trainNo;
+		this.date = date;
+		this.acSeats = acSeats;
+		this.slSeats = slSeats;
+		this.passengers = passengers;
+	}
+
+	public BookTicketRequest() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+
+	@Override
+	public String toString() {
+		return "BookTicketRequest [userId=" + userId + ", trainNo=" + trainNo + ", date=" + date + ", acSeats="
+				+ acSeats + ", slSeats=" + slSeats + ", passengers=" + passengers + "]";
+	}
+    
+    
+    
+}
+...................................................................
+package com.tcs.Booking.DTO;
+
+public class PassengerDTO {
+	private int id;
+	private String name;
+	private int age;
+	private String gender;
+	public PassengerDTO() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+	public int getId() {
+		return id;
+	}
+	public void setId(int id) {
+		this.id = id;
+	}
+	public String getName() {
+		return name;
+	}
+	public void setName(String name) {
+		this.name = name;
+	}
+	public int getAge() {
+		return age;
+	}
+	public void setAge(int age) {
+		this.age = age;
+	}
+	public String getGender() {
+		return gender;
+	}
+	public void setGender(String gender) {
+		this.gender = gender;
+	}
+	public PassengerDTO(int id, String name, int age, String gender) {
+		super();
+		this.id = id;
+		this.name = name;
+		this.age = age;
+		this.gender = gender;
+	}
+	public PassengerDTO(String name, int age, String gender) {
+		super();
+		this.name = name;
+		this.age = age;
+		this.gender = gender;
+	}
+	
+	
+	
+	
+}
+....................................................................
+package com.tcs.Booking.DTO;
+
+import java.util.List;
+
+import com.tcs.Booking.model.Booking;
+
+public class UserDTO {
+	private int userId;
+	private String userName;
+	private String email;
+	
+	private List<Booking> bookings;
+
+	@Override
+	public String toString() {
+		return "UserDTO [userId=" + userId + ", userName=" + userName + ", email=" + email + ", bookings=" + bookings
+				+ "]";
+	}
+
+	public UserDTO() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+
+	public int getUserId() {
+		return userId;
+	}
+
+	public void setUserId(int userId) {
+		this.userId = userId;
+	}
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+	public List<Booking> getBookings() {
+		return bookings;
+	}
+
+	public void setBookings(List<Booking> bookings) {
+		this.bookings = bookings;
+	}
+
+	public UserDTO(int userId, String userName, String email, List<Booking> bookings) {
+		super();
+		this.userId = userId;
+		this.userName = userName;
+		this.email = email;
+		this.bookings = bookings;
+	}
+
+	public UserDTO(String userName, String email, List<Booking> bookings) {
+		super();
+		this.userName = userName;
+		this.email = email;
+		this.bookings = bookings;
+	}
+
+	
+	
+}
+
+....................................................................
+package com.tcs.Booking.model;
+
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+
+@Entity(name = "booking_pbl")
+public class Booking {
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private int bookingId;
+	private int userId;
+	private int trainNo;
+	private String trainName;
+	private String fromStation;
+	private String toStation;
+	private String startTime;
+	private String endTime;
+	private String journeyDate;
+	private String seatNumbers;
+	private String bookingDate;
+	private int price;
+	private String bookingStatus;
+	
+	
+	
+	public Booking(){}
+
+	@Override
+	public String toString() {
+		return "Booking [bookingId=" + bookingId + ", userId=" + userId + ", trainNo=" + trainNo + ", trainName="
+				+ trainName + ", fromStation=" + fromStation + ", toStation=" + toStation + ", startTime=" + startTime + ", endTime=" + endTime
+				+ ", journeyDate=" + journeyDate + ", seatNumbers=" + seatNumbers + ", bookingDate=" + bookingDate
+				+ ", price=" + price + ", bookingStatus=" + bookingStatus + "]";
+	}
+
+	public int getBookingId() {
+		return bookingId;
+	}
+
+	public void setBookingId(int bookingId) {
+		this.bookingId = bookingId;
+	}
+
+	public int getUserId() {
+		return userId;
+	}
+
+	public void setUserId(int userId) {
+		this.userId = userId;
+	}
+
+	public int getTrainNo() {
+		return trainNo;
+	}
+
+	public void setTrainNo(int trainNo) {
+		this.trainNo = trainNo;
+	}
+
+	public String getTrainName() {
+		return trainName;
+	}
+
+	public void setTrainName(String trainName) {
+		this.trainName = trainName;
+	}
+
+	public String getFromStation() {
+		return fromStation;
+	}
+
+	public void setFromStation(String fromStation) {
+		this.fromStation = fromStation;
+	}
+
+	public String getToStation() {
+		return toStation;
+	}
+
+	public void setToStation(String toStation) {
+		this.toStation = toStation;
+	}
+
+	public String getStartTime() {
+		return startTime;
+	}
+
+	public void setStartTime(String startTime) {
+		this.startTime = startTime;
+	}
+
+	public String getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+
+	public String getJourneyDate() {
+		return journeyDate;
+	}
+
+	public void setJourneyDate(String journeyDate) {
+		this.journeyDate = journeyDate;
+	}
+
+	public String getSeatNumbers() {
+		return seatNumbers;
+	}
+
+	public void setSeatNumbers(String seatNumbers) {
+		this.seatNumbers = seatNumbers;
+	}
+
+	public String getBookingDate() {
+		return bookingDate;
+	}
+
+	public void setBookingDate(String bookingDate) {
+		this.bookingDate = bookingDate;
+	}
+
+	public int getPrice() {
+		return price;
+	}
+
+	public void setPrice(int price) {
+		this.price = price;
+	}
+
+	public String getBookingStatus() {
+		return bookingStatus;
+	}
+
+	public void setBookingStatus(String bookingStatus) {
+		this.bookingStatus = bookingStatus;
+	}
+
+	public Booking(int bookingId, int userId, int trainNo, String trainName, String fromStation, String toStation, String startTime,
+			String endTime, String journeyDate, String seatNumbers, String bookingDate, int price,
+			String bookingStatus) {
+		super();
+		this.bookingId = bookingId;
+		this.userId = userId;
+		this.trainNo = trainNo;
+		this.trainName = trainName;
+		this.fromStation = fromStation;
+		this.toStation = toStation;
+		this.startTime = startTime;
+		this.endTime = endTime;
+		this.journeyDate = journeyDate;
+		this.seatNumbers = seatNumbers;
+		this.bookingDate = bookingDate;
+		this.price = price;
+		this.bookingStatus = bookingStatus;
+	}
+
+	public Booking(int userId, int trainNo, String trainName, String fromStation, String toStation, String startTime, String endTime,
+			String journeyDate, String seatNumbers, String bookingDate, int price, String bookingStatus) {
+		super();
+		this.userId = userId;
+		this.trainNo = trainNo;
+		this.trainName = trainName;
+		this.fromStation = fromStation;
+		this.toStation = toStation;
+		this.startTime = startTime;
+		this.endTime = endTime;
+		this.journeyDate = journeyDate;
+		this.seatNumbers = seatNumbers;
+		this.bookingDate = bookingDate;
+		this.price = price;
+		this.bookingStatus = bookingStatus;
+	}
+	
+	
+}
+....................................................................
+package com.tcs.Booking.model;
+
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+
+@Entity(name="passenger_pbl")
+public class Passenger {
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private int id;
+	private int bookingId;
+	private String SeatNumber;
+	private String name;
+	private int age;
+	private String gender;
+	
+	public Passenger() {}
+
+	public int getId() {
+		return id;
+	}
+
+	public void setId(int id) {
+		this.id = id;
+	}
+
+	public int getBookingId() {
+		return bookingId;
+	}
+
+	public void setBookingId(int bookingId) {
+		this.bookingId = bookingId;
+	}
+
+	public String getSeatNumber() {
+		return SeatNumber;
+	}
+
+	public void setSeatNumber(String seatNumber) {
+		SeatNumber = seatNumber;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public int getAge() {
+		return age;
+	}
+
+	public void setAge(int age) {
+		this.age = age;
+	}
+
+	public String getGender() {
+		return gender;
+	}
+
+	public void setGender(String gender) {
+		this.gender = gender;
+	}
+
+	public Passenger(int id, int bookingId, String seatNumber, String name, int age, String gender) {
+		super();
+		this.id = id;
+		this.bookingId = bookingId;
+		SeatNumber = seatNumber;
+		this.name = name;
+		this.age = age;
+		this.gender = gender;
+	}
+
+	public Passenger(int bookingId, String seatNumber, String name, int age, String gender) {
+		super();
+		this.bookingId = bookingId;
+		SeatNumber = seatNumber;
+		this.name = name;
+		this.age = age;
+		this.gender = gender;
+	}
+
+	@Override
+	public String toString() {
+		return "Passenger [id=" + id + ", bookingId=" + bookingId + ", SeatNumber=" + SeatNumber + ", name=" + name
+				+ ", age=" + age + ", gender=" + gender + "]";
+	}
+
+	
+	
+	
+	
+}
+
+...................................................................
+package com.tcs.Booking.model;
+
+public class Train {
+	private int trainId;
+	private int trainNo;
+	private String trainName; 
+	private String originStation; 
+	private String destinationStation; 
+	private String departureTime; 
+	private String arrivalTime; 
+	private int totalAcSeats;
+	private int availableAcSeats;
+	private int totalSleeperSeats;
+	private int availableSleeperSeats;
+	private int distance;
+	
+	
+	public Train() {}
+
+
+	public Train(int trainId, int trainNo, String trainName, String originStation, String destinationStation,
+			String departureTime, String arrivalTime, int totalAcSeats, int availableAcSeats, int totalSleeperSeats,
+			int availableSleeperSeats, int distance) {
+		super();
+		this.trainId = trainId;
+		this.trainNo = trainNo;
+		this.trainName = trainName;
+		this.originStation = originStation;
+		this.destinationStation = destinationStation;
+		this.departureTime = departureTime;
+		this.arrivalTime = arrivalTime;
+		this.totalAcSeats = totalAcSeats;
+		this.availableAcSeats = availableAcSeats;
+		this.totalSleeperSeats = totalSleeperSeats;
+		this.availableSleeperSeats = availableSleeperSeats;
+		this.distance = distance;
+	}
+
+
+	public Train(int trainNo, String trainName, String originStation, String destinationStation, String departureTime,
+			String arrivalTime, int totalAcSeats, int availableAcSeats, int totalSleeperSeats,
+			int availableSleeperSeats, int distance) {
+		super();
+		this.trainNo = trainNo;
+		this.trainName = trainName;
+		this.originStation = originStation;
+		this.destinationStation = destinationStation;
+		this.departureTime = departureTime;
+		this.arrivalTime = arrivalTime;
+		this.totalAcSeats = totalAcSeats;
+		this.availableAcSeats = availableAcSeats;
+		this.totalSleeperSeats = totalSleeperSeats;
+		this.availableSleeperSeats = availableSleeperSeats;
+		this.distance = distance;
+	}
+
+
+	public int getTrainId() {
+		return trainId;
+	}
+
+
+	public void setTrainId(int trainId) {
+		this.trainId = trainId;
+	}
+
+
+	public int getTrainNo() {
+		return trainNo;
+	}
+
+
+	public void setTrainNo(int trainNo) {
+		this.trainNo = trainNo;
+	}
+
+
+	public String getTrainName() {
+		return trainName;
+	}
+
+
+	public void setTrainName(String trainName) {
+		this.trainName = trainName;
+	}
+
+
+	public String getOriginStation() {
+		return originStation;
+	}
+
+
+	public void setOriginStation(String originStation) {
+		this.originStation = originStation;
+	}
+
+
+	public String getDestinationStation() {
+		return destinationStation;
+	}
+
+
+	public void setDestinationStation(String destinationStation) {
+		this.destinationStation = destinationStation;
+	}
+
+
+	public String getDepartureTime() {
+		return departureTime;
+	}
+
+
+	public void setDepartureTime(String departureTime) {
+		this.departureTime = departureTime;
+	}
+
+
+	public String getArrivalTime() {
+		return arrivalTime;
+	}
+
+
+	public void setArrivalTime(String arrivalTime) {
+		this.arrivalTime = arrivalTime;
+	}
+
+
+	public int getTotalAcSeats() {
+		return totalAcSeats;
+	}
+
+
+	public void setTotalAcSeats(int totalAcSeats) {
+		this.totalAcSeats = totalAcSeats;
+	}
+
+
+	public int getAvailableAcSeats() {
+		return availableAcSeats;
+	}
+
+
+	public void setAvailableAcSeats(int availableAcSeats) {
+		this.availableAcSeats = availableAcSeats;
+	}
+
+
+	public int getTotalSleeperSeats() {
+		return totalSleeperSeats;
+	}
+
+
+	public void setTotalSleeperSeats(int totalSleeperSeats) {
+		this.totalSleeperSeats = totalSleeperSeats;
+	}
+
+
+	public int getAvailableSleeperSeats() {
+		return availableSleeperSeats;
+	}
+
+
+	public void setAvailableSleeperSeats(int availableSleeperSeats) {
+		this.availableSleeperSeats = availableSleeperSeats;
+	}
+
+
+	public int getDistance() {
+		return distance;
+	}
+
+
+	public void setDistance(int distance) {
+		this.distance = distance;
+	}
+
+
+	@Override
+	public String toString() {
+		return "Train [trainId=" + trainId + ", trainNo=" + trainNo + ", trainName=" + trainName + ", originStation="
+				+ originStation + ", destinationStation=" + destinationStation + ", departureTime=" + departureTime
+				+ ", arrivalTime=" + arrivalTime + ", totalAcSeats=" + totalAcSeats + ", availableAcSeats="
+				+ availableAcSeats + ", totalSleeperSeats=" + totalSleeperSeats + ", availableSleeperSeats="
+				+ availableSleeperSeats + ", distance=" + distance + "]";
+	}
+
+}
+.....................................................................
+package com.tcs.Booking.model;
+
+public class User {
+	private int userId;
+	private String userName;
+	private String email;
+	private String password;
+	private String address;
+	private String contact;
+	private String type;
+	
+	public User() {}
+	
+	
+
+	public User(String userName, String email, String password, String address, String contact, String type) {
+		super();
+		this.userName = userName;
+		this.email = email;
+		this.password = password;
+		this.address = address;
+		this.contact = contact;
+		this.type = type;
+	}
+
+
+
+	@Override
+	public String toString() {
+		return "User [userId=" + userId + ", userName=" + userName + ", email=" + email + ", password=" + password
+				+ ", address=" + address + ", contact=" + contact + ", type=" + type + "]";
+	}
+
+	public int getUserId() {
+		return userId;
+	}
+
+	public void setUserId(int userId) {
+		this.userId = userId;
+	}
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+	public String getPassword() {
+		return password;
+	}
+
+	public void setPassword(String password) {
+		this.password = password;
+	}
+
+	public String getAddress() {
+		return address;
+	}
+
+	public void setAddress(String address) {
+		this.address = address;
+	}
+
+	public String getContact() {
+		return contact;
+	}
+
+	public void setContact(String contact) {
+		this.contact = contact;
+	}
+
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
+
+	public User(int userId, String userName, String email, String password, String address, String contact,
+			String type) {
+		super();
+		this.userId = userId;
+		this.userName = userName;
+		this.email = email;
+		this.password = password;
+		this.address = address;
+		this.contact = contact;
+		this.type = type;
+	}
+	
+}
+....................................................................
+package com.tcs.Booking.repository;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import com.tcs.Booking.model.Booking;
+
+
+public interface BookingRepository extends JpaRepository<Booking, Integer>{
+	
+	List<Booking> findByUserId(int userId);
+}
+
+....................................................................
+package com.tcs.Booking.repository;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import com.tcs.Booking.model.Passenger;
+
+@Repository
+public interface PassengerRepository extends JpaRepository<Passenger,Integer>{
+	List<Passenger> findByBookingId(int bookingId);
+}
+....................................................................
+
+package com.tcs.Booking.service;
+
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.tcs.Booking.DTO.BookingDTO;
+import com.tcs.Booking.DTO.PassengerDTO;
+import com.tcs.Booking.DTO.UserDTO;
+import com.tcs.Booking.config.BookingException;
+import com.tcs.Booking.config.ResourceNotFoundException;
+import com.tcs.Booking.model.Booking;
+import com.tcs.Booking.model.Passenger;
+import com.tcs.Booking.model.Train;
+import com.tcs.Booking.model.User;
+import com.tcs.Booking.repository.BookingRepository;
+
+@Service
+public class BookingService {
+
+	Logger logger = LoggerFactory.getLogger(getClass());
+	@Autowired
+	private BookingRepository bookingRepository;
+
+	@Autowired
+	private UserService userService;
+
+	@Autowired
+	private TrainService trainService;
+
+	@Autowired
+	private PassengerService passengerService;
+
+	public void cancelBooking(int bookingId) throws Exception {
+	    Booking booking = bookingRepository.findById(bookingId)
+	        .orElseThrow(() -> new Exception("Booking not found"));
+
+	    if ("CANCELLED".equalsIgnoreCase(booking.getBookingStatus())) {
+	        throw new Exception("Booking is already cancelled");
+	    }
+
+	    booking.setBookingStatus("CANCELLED");
+	    bookingRepository.save(booking);
+	}
+	
+	public Booking BookTicket(int userId, int trainNo, String date, int acSeats, int slSeats,
+			List<PassengerDTO> passangers) throws Exception {
+
+		User user = this.userService.getUser(userId);
+		if (user == null)
+	        throw new ResourceNotFoundException("User with ID " + userId + " not found");
+		Train train = this.trainService.getTrainByNo(trainNo);
+		if (train == null)
+	        throw new ResourceNotFoundException("Train with number " + trainNo + " not found");
+		
+		int totalseatbooked = acSeats + slSeats;
+		
+		if (train.getAvailableAcSeats() < acSeats || train.getAvailableSleeperSeats() < slSeats)
+		        throw new BookingException("Insufficient seats available");
+		 if (passangers == null || passangers.size() != (acSeats + slSeats))
+		        throw new BookingException("Mismatch between seat count and passenger list size");
+		
+		List<Passenger> ps = new ArrayList<Passenger>(totalseatbooked);
+		double acMultiplier = 2.5;
+		double slMultiplier = 1.5;
+
+		int acFare = (int) (train.getDistance() * acMultiplier) * acSeats;
+		int slFare = (int) (train.getDistance() * slMultiplier) * slSeats;
+
+		int totalFare = acFare + slFare;
+		int price = totalFare;
+		// Seat allocation
+		int acStart = train.getTotalAcSeats() - train.getAvailableAcSeats();
+		int slStart = train.getTotalSleeperSeats() - train.getAvailableSleeperSeats();
+
+		List<String> seatNumbers = new ArrayList<>();
+		for (int i = 1; i <= acSeats; i++) {
+			seatNumbers.add("AC" + (acStart + i));
+		}
+		for (int i = 1; i <= slSeats; i++) {
+			seatNumbers.add("SL" + (slStart + i));
+		}
+
+		String seats = String.join(" ", seatNumbers);
+		Booking booking = new Booking(user.getUserId(), train.getTrainNo(), train.getTrainName(),
+				train.getOriginStation(), train.getDestinationStation(), train.getDepartureTime(),
+				train.getArrivalTime(), date, seats, LocalDate.now().toString(), price, "Confirmed");
+		booking = this.bookingRepository.save(booking);
+		// Map passengers
+		List<Passenger> passengerEntities = new ArrayList<>();
+		for (int i = 0; i < passangers.size(); i++) {
+			PassengerDTO dto = passangers.get(i);
+			Passenger p = new Passenger();
+			p.setBookingId(booking.getBookingId());
+			p.setSeatNumber(seatNumbers.get(i));
+			p.setName(dto.getName());
+			p.setAge(dto.getAge());
+			p.setGender(dto.getGender());
+			passengerEntities.add(p);
+		}
+
+		List<Passenger> os = this.passengerService.saveAllPassenger(passengerEntities);
+		this.bookingRepository.save(booking);
+		// Update train seat availability
+		train.setAvailableAcSeats(train.getAvailableAcSeats() - acSeats);
+		train.setAvailableSleeperSeats(train.getAvailableSleeperSeats() - slSeats);
+		this.trainService.updateTrain(train);
+
+		return booking;
+	}
+
+	// find all users
+	public List<Booking> getBookings() {
+		return this.bookingRepository.findAll();
+	}
+
+	// findbyId
+	public BookingDTO getBooking(int id) throws Exception {
+		Booking output = this.bookingRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Booking ID " + id + " not found"));
+		User user = this.userService.getUser(output.getUserId());
+		if (user == null)
+	        throw new ResourceNotFoundException("User not found for booking ID " + id);
+		BookingDTO bookingDTO = mapper(output);
+		bookingDTO.setUser(user);
+		List<Passenger> passengers = this.passengerService.getAllPassengerByBookingId(id);
+		bookingDTO.setPassengers(passengers);
+		return bookingDTO;
+	}
+
+	// find all users
+	public List<Booking> getBookingsByUserId(int userid) {
+		return this.bookingRepository.findAll();
+	}
+
+	public UserDTO getAllBookingsOfUser(int userId) {
+		User user = this.userService.getUser(userId);
+		List<Booking> bookings = this.bookingRepository.findByUserId(user.getUserId());
+		UserDTO userDTO = mapper(user);
+		userDTO.setBookings(bookings);
+		return userDTO;
+	}
+
+	private UserDTO mapper(User user) {
+		UserDTO userDTO = new UserDTO();
+		userDTO.setUserId(user.getUserId());
+		userDTO.setUserName(user.getUserName());
+		userDTO.setEmail(user.getEmail());
+		return userDTO;
+
+	}
+
+	private BookingDTO mapper(Booking booking) {
+		BookingDTO bookingDTO = new BookingDTO();
+		bookingDTO.setUserId(booking.getUserId());
+		bookingDTO.setTrainNo(booking.getTrainNo());
+		bookingDTO.setTrainName(booking.getTrainName());
+		bookingDTO.setFromStation(booking.getFromStation());
+		bookingDTO.setToStation(booking.getToStation());
+		bookingDTO.setStartTime(booking.getStartTime());
+
+		bookingDTO.setEndTime(booking.getEndTime());
+		bookingDTO.setJourneyDate(booking.getJourneyDate());
+		bookingDTO.setSeatNumbers(booking.getSeatNumbers());
+		bookingDTO.setBookingDate(booking.getBookingDate());
+		bookingDTO.setPrice(booking.getPrice());
+		bookingDTO.setBookingStatus(booking.getBookingStatus());
+		return bookingDTO;
+
+	}
+
+}
+....................................................................
+package com.tcs.Booking.service;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.tcs.Booking.model.Passenger;
+import com.tcs.Booking.repository.PassengerRepository;
+
+@Service
+public class PassengerService {
+	@Autowired
+	PassengerRepository passengerRepository ;
+	
+	public List<Passenger> saveAllPassenger(List<Passenger> passengers) {
+		return this.passengerRepository.saveAll(passengers);
+	}
+	
+	
+	public List<Passenger> getAllPassengerByBookingId(int bookingId) {
+		return this.passengerRepository.findByBookingId(bookingId);
+	}
+}
+
+....................................................................
+package com.tcs.Booking.service;
+
+
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+
+import com.tcs.Booking.model.Train;
+
+
+
+
+@FeignClient(name="ADMIN",url="http://localhost:8102")//port address of bill
+public interface TrainService {
+	@GetMapping("/getTrainByNo/{trainNo}")
+	public Train getTrainByNo(@PathVariable("trainNo") Integer trainNo);
+	
+	
+	@PutMapping("/updateTrain")
+	Train updateTrain(@RequestBody Train train);
+}
+......................................................................
+package com.tcs.Booking.service;
+
+
+
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+
+import com.tcs.Booking.model.User;
+
+
+@FeignClient(name="USER",url="http://localhost:8101")//port address of bill
+public interface UserService {
+	@GetMapping("/getUserById/{id}")
+	public User getUser(@PathVariable("id") Integer id);
+}
+
+.....................................................................
+spring.application.name=Booking
+
+
+spring.h2.console.enabled=true
+
+spring.datasource.url= jdbc:h2:mem:BookingDB
+
+logging.level.com.tcs.Booking = DEBUG
+
+server.port=8100
+
+#add config to register to the eureka server
+eureka.instance.prefer-ip-address=false
+eureka.client.register-with-eureka=true
+eureka.client.service-url.defaultzone = http://localhost:8761/eureka

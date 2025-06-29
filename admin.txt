@@ -1,0 +1,1087 @@
+AdminApplication.java
+package com.tcs.Admin;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.openfeign.EnableFeignClients;
+
+@SpringBootApplication
+@EnableFeignClients
+public class AdminApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(AdminApplication.class, args);
+	}
+
+}
+
+
+...................................................................
+
+CustomerCommandLineRunner.java
+// Code used for testing
+package com.tcs.Admin.config;
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.stereotype.Component;
+
+import com.tcs.Admin.model.Train;
+import com.tcs.Admin.service.TrainService;
+
+
+@Component
+public class CustomCommandLineRunner  implements CommandLineRunner {
+Logger logger = LoggerFactory.getLogger(getClass());
+
+@Autowired
+TrainService trainService;
+	@Override
+	public void run(String... args) throws Exception {
+		// Values for testing purpose
+//		logger.info("***********************************************");
+//		logger.info("CommandLineRunner Admin is working");
+//		logger.debug("hi this an error at the debug level");
+//
+//
+//		Train t1=new Train(10893,"Sarnath Express", "Durg", "Uttarpradesh", "20:25", "14:00",50,50,200,200,100);
+//		Train t2=new Train(22343,"Gitanjali Express", "Mumbai", "Nagpur", "03:00", "18:10",50,50,200,200,100);
+//	
+//
+//		this.trainService.saveTrain(t1);
+//		this.trainService.saveTrain(t2);
+//	
+//		logger.debug("all the bills are saved");
+//		
+//		logger.info("***********************************************");
+//		
+//		//1/ read
+//		
+//		logger.debug("using findAll");
+//		List<Train> tlist=trainService.getTrains();
+//		logger.debug("{}",tlist);
+//		
+//		logger.info("***********************************************");
+//		
+//		logger.debug("using findById");
+//		Train res = this.trainService.getTrain(1);
+//		logger.debug("{}",res);
+//				
+//		logger.info("***********************************************");
+//
+//		logger.debug("using findBytrainNo");
+//		Train tt = this.trainService.getTrainByNo(10893);
+//		logger.debug("{}",tt);
+//				
+//		logger.info("***********************************************");
+//		logger.info("*****CommandLineRunner Admin End******************");
+//		logger.info("***********************************************");
+		
+		
+		
+	
+	}
+
+}
+
+
+........................................................................
+AdminController.java
+package com.tcs.Admin.controller;
+
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.tcs.Admin.DTO.FindTrainByRouteDTO;
+import com.tcs.Admin.DTO.TotalSeatsBookedDTO;
+import com.tcs.Admin.DTO.TrainRouteDTO;
+import com.tcs.Admin.model.Train;
+import com.tcs.Admin.model.TrainRoute;
+import com.tcs.Admin.service.TrainRouteService;
+import com.tcs.Admin.service.TrainService;
+
+
+@RestController
+@CrossOrigin(origins = "http://localhost:4200/")
+//@RequestMapping("/train")
+public class AdminController {
+
+	Logger logger =LoggerFactory.getLogger(getClass());
+	
+	@Autowired
+	TrainService trainService;
+    
+    @Autowired
+	TrainRouteService trainRouteService;
+    
+
+    @GetMapping("/getAllStationNames")
+    public List<String> getDistinctStations(){
+    	return this.trainRouteService.getDistinctStations();
+    }
+    
+    @GetMapping("/getTrains")
+	public List<Train> getTrains() {
+    	List<Train> list=this.trainService.getTrains();
+		return list;
+	}
+    
+    @GetMapping("/getTrainsBetween")
+	public List<Object[]> getTrainsBetweenStations(FindTrainByRouteDTO findTrainByRouteDTO) {
+    	List<Object[]> list=this.trainService.findTrainsBetweenStations(findTrainByRouteDTO.getSource(), findTrainByRouteDTO.getDestination());
+		return list;
+	}
+	
+	@GetMapping("/getTrain/{id}")
+   	public Train getTrain(@PathVariable("id") int id) throws Exception {
+       	return this.trainService.getTrain(id);
+   	}
+    @GetMapping("/getTrainByNo/{trainNo}")
+   	public Train getTrainByNo(@PathVariable("trainNo") int trainNo) throws Exception {
+       	return this.trainService.getTrainByNo(trainNo);
+   	}
+
+    @PutMapping("/updateTrain")
+   	public Train updateTrain(@RequestBody Train train) throws Exception {
+       	this.trainService.updateTrain(train);
+       	return train;
+   	}
+    
+    @DeleteMapping("/deleteTrain/{id}")
+   	public void deleteTrain(@PathVariable("id") int id) throws Exception {
+       	this.trainService.deleteTrain(id);	
+   	}
+    
+    @PostMapping("/saveTrain")
+   	public Train saveTrain(@RequestBody Train train) {
+       return this.trainService.saveTrain(train);
+   	}
+    
+    //routes controllers
+    
+    @PostMapping("/updateTrainRoute")
+    public TrainRoute updateTrainRoute(@RequestBody TrainRoute tr) {
+    	return this.trainRouteService.updateTrainRoute(tr);
+    }
+    
+    @GetMapping("/getTrainRoutesByTrainNo")
+    public List<TrainRoute> getTrainRoutesByTrainNo(@RequestParam("trainId")int trainId) throws Exception{
+    	List<TrainRoute> trs = this.trainRouteService.getTrainRoutesByTrainNo(trainId);
+    	if(trs==null) {
+    		throw new Exception("Train Routes Not Found");
+    		}
+    	return trs;
+    	}
+    	
+    	
+    	//addIntermediateStop
+        
+        @PutMapping("/updateTrainRoutes")
+        public String updateTrainRoute( @RequestParam("trainNo") int trainNo, @RequestBody List<TrainRouteDTO> trainRouteDTOs) {
+
+            try {
+                trainRouteService.updateTrainRoutes(trainNo, trainRouteDTOs);
+                return "Train route updated successfully.";
+            } catch (RuntimeException e) {
+                return "Error updating train route: " + e.getMessage();
+            } catch (Exception e) {
+                return "Unexpected error occurred.";
+            }
+        }
+
+        @GetMapping("/getTotalTicketsBooked")
+        public TotalSeatsBookedDTO getTotalSeatsBooked() {
+        	return this.trainService.getTotalSeatsBooked();
+        }
+    	
+    	
+
+	@GetMapping("/getTrainRoutes")
+	public List<TrainRoute> getTrainRoutes(){
+		return this.trainRouteService.getTrainRoutes();
+	}
+	
+	@PostMapping("/saveTrainRoute")
+	public TrainRoute saveTrainRoute(@RequestBody TrainRoute trainRoute) {
+	
+		return this.trainRouteService.saveTrainRoute(trainRoute);
+	}
+	
+	@PostMapping("/saveTrainRoutes")
+	public List<TrainRoute> saveTrainRoutes(@RequestBody List<TrainRoute> trainRoutes) {
+		return this.trainRouteService.saveTrainRoutes(trainRoutes);
+	}
+}
+
+......................................................................
+
+package com.tcs.Admin.DTO;
+
+
+public class FindTrainByRouteDTO {
+	private String source;
+	private String destination;
+	public String getSource() {
+		return source;
+	}
+	public void setSource(String source) {
+		this.source = source;
+	}
+	public String getDestination() {
+		return destination;
+	}
+	public void setDestination(String destination) {
+		this.destination = destination;
+	}
+	public FindTrainByRouteDTO() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+	
+	
+	
+}
+
+.....................................................................
+
+package com.tcs.Admin.DTO;
+
+//extra class DTO 
+
+
+public class TotalSeatsBookedDTO {
+	private int acSeats;
+	private int slSeats;
+	private int total;
+	@Override
+	public String toString() {
+		return "TotalSeatsBookedDTO [acSeats=" + acSeats + ", slSeats=" + slSeats + ", total=" + total + "]";
+	}
+	public int getAcSeats() {
+		return acSeats;
+	}
+	public void setAcSeats(int acSeats) {
+		this.acSeats = acSeats;
+	}
+	public int getSlSeats() {
+		return slSeats;
+	}
+	public void setSlSeats(int slSeats) {
+		this.slSeats = slSeats;
+	}
+	public int getTotal() {
+		return total;
+	}
+	public void setTotal(int total) {
+		this.total = total;
+	}
+	public TotalSeatsBookedDTO() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+}
+
+
+...........................................................................
+
+package com.tcs.Admin.DTO;
+//extra class DTO
+public class TrainRouteDTO {
+	private String stationName;
+    private String arrivalTime;
+    private int distanceFromOrigin;
+	public String getStationName() {
+		return stationName;
+	}
+	public void setStationName(String stationName) {
+		this.stationName = stationName;
+	}
+	public String getArrivalTime() {
+		return arrivalTime;
+	}
+	public void setArrivalTime(String arrivalTime) {
+		this.arrivalTime = arrivalTime;
+	}
+	public int getDistanceFromOrigin() {
+		return distanceFromOrigin;
+	}
+	public void setDistanceFromOrigin(int distanceFromOrigin) {
+		this.distanceFromOrigin = distanceFromOrigin;
+	}
+	public TrainRouteDTO() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+}
+
+.......................................................................
+
+package com.tcs.Admin.DTO;
+
+
+public class UserDTO {
+	private int userId;
+	private String userName;
+	private String email;
+	private String password;
+	private String address;
+	private String contact;
+	
+	private String type;
+
+	@Override
+	public String toString() {
+		return "UserDTO [userId=" + userId + ", userName=" + userName + ", email=" + email + ", password=" + password
+				+ ", address=" + address + ", contact=" + contact + ", type=" + type + "]";
+	}
+
+	public int getUserId() {
+		return userId;
+	}
+
+	public void setUserId(int userId) {
+		this.userId = userId;
+	}
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+	public String getPassword() {
+		return password;
+	}
+
+	public void setPassword(String password) {
+		this.password = password;
+	}
+
+	public String getAddress() {
+		return address;
+	}
+
+	public void setAddress(String address) {
+		this.address = address;
+	}
+
+	public String getContact() {
+		return contact;
+	}
+
+	public void setContact(String contact) {
+		this.contact = contact;
+	}
+
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
+
+	public UserDTO(int userId, String userName, String email, String password, String address, String contact,
+			String type) {
+		super();
+		this.userId = userId;
+		this.userName = userName;
+		this.email = email;
+		this.password = password;
+		this.address = address;
+		this.contact = contact;
+		this.type = type;
+	}
+
+	public UserDTO() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+	
+	
+	
+	
+	
+}
+...........................................................................
+
+package com.tcs.Admin.model;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+
+@Entity(name = "train_pbl")
+public class Train {
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private int trainId;
+	private int trainNo;
+	private String trainName; 
+	private String originStation; 
+	private String destinationStation; 
+	private String departureTime; 
+	private String arrivalTime; 
+	private int totalAcSeats;
+	private int availableAcSeats;
+	private int totalSleeperSeats;
+	private int availableSleeperSeats;
+	private int distance;
+	
+	
+	public Train() {}
+
+
+	public Train(int trainId, int trainNo, String trainName, String originStation, String destinationStation,
+			String departureTime, String arrivalTime, int totalAcSeats, int availableAcSeats, int totalSleeperSeats,
+			int availableSleeperSeats, int distance) {
+		super();
+		this.trainId = trainId;
+		this.trainNo = trainNo;
+		this.trainName = trainName;
+		this.originStation = originStation;
+		this.destinationStation = destinationStation;
+		this.departureTime = departureTime;
+		this.arrivalTime = arrivalTime;
+		this.totalAcSeats = totalAcSeats;
+		this.availableAcSeats = availableAcSeats;
+		this.totalSleeperSeats = totalSleeperSeats;
+		this.availableSleeperSeats = availableSleeperSeats;
+		this.distance = distance;
+	}
+
+
+	public Train(int trainNo, String trainName, String originStation, String destinationStation, String departureTime,
+			String arrivalTime, int totalAcSeats, int availableAcSeats, int totalSleeperSeats,
+			int availableSleeperSeats, int distance) {
+		super();
+		this.trainNo = trainNo;
+		this.trainName = trainName;
+		this.originStation = originStation;
+		this.destinationStation = destinationStation;
+		this.departureTime = departureTime;
+		this.arrivalTime = arrivalTime;
+		this.totalAcSeats = totalAcSeats;
+		this.availableAcSeats = availableAcSeats;
+		this.totalSleeperSeats = totalSleeperSeats;
+		this.availableSleeperSeats = availableSleeperSeats;
+		this.distance = distance;
+	}
+
+
+	public int getTrainId() {
+		return trainId;
+	}
+
+
+	public void setTrainId(int trainId) {
+		this.trainId = trainId;
+	}
+
+
+	public int getTrainNo() {
+		return trainNo;
+	}
+
+
+	public void setTrainNo(int trainNo) {
+		this.trainNo = trainNo;
+	}
+
+
+	public String getTrainName() {
+		return trainName;
+	}
+
+
+	public void setTrainName(String trainName) {
+		this.trainName = trainName;
+	}
+
+
+	public String getOriginStation() {
+		return originStation;
+	}
+
+
+	public void setOriginStation(String originStation) {
+		this.originStation = originStation;
+	}
+
+
+	public String getDestinationStation() {
+		return destinationStation;
+	}
+
+
+	public void setDestinationStation(String destinationStation) {
+		this.destinationStation = destinationStation;
+	}
+
+
+	public String getDepartureTime() {
+		return departureTime;
+	}
+
+
+	public void setDepartureTime(String departureTime) {
+		this.departureTime = departureTime;
+	}
+
+
+	public String getArrivalTime() {
+		return arrivalTime;
+	}
+
+
+	public void setArrivalTime(String arrivalTime) {
+		this.arrivalTime = arrivalTime;
+	}
+
+
+	public int getTotalAcSeats() {
+		return totalAcSeats;
+	}
+
+
+	public void setTotalAcSeats(int totalAcSeats) {
+		this.totalAcSeats = totalAcSeats;
+	}
+
+
+	public int getAvailableAcSeats() {
+		return availableAcSeats;
+	}
+
+
+	public void setAvailableAcSeats(int availableAcSeats) {
+		this.availableAcSeats = availableAcSeats;
+	}
+
+
+	public int getTotalSleeperSeats() {
+		return totalSleeperSeats;
+	}
+
+
+	public void setTotalSleeperSeats(int totalSleeperSeats) {
+		this.totalSleeperSeats = totalSleeperSeats;
+	}
+
+
+	public int getAvailableSleeperSeats() {
+		return availableSleeperSeats;
+	}
+
+
+	public void setAvailableSleeperSeats(int availableSleeperSeats) {
+		this.availableSleeperSeats = availableSleeperSeats;
+	}
+
+
+	public int getDistance() {
+		return distance;
+	}
+
+
+	public void setDistance(int distance) {
+		this.distance = distance;
+	}
+
+
+	@Override
+	public String toString() {
+		return "Train [trainId=" + trainId + ", trainNo=" + trainNo + ", trainName=" + trainName + ", originStation="
+				+ originStation + ", destinationStation=" + destinationStation + ", departureTime=" + departureTime
+				+ ", arrivalTime=" + arrivalTime + ", totalAcSeats=" + totalAcSeats + ", availableAcSeats="
+				+ availableAcSeats + ", totalSleeperSeats=" + totalSleeperSeats + ", availableSleeperSeats="
+				+ availableSleeperSeats + ", distance=" + distance + "]";
+	}
+
+	
+	
+	
+}
+
+.......................................................................
+package com.tcs.Admin.model;
+
+
+import jakarta.persistence.*;
+
+
+@Entity
+@Table(name = "train_route_pbl")
+public class TrainRoute {
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "route_id")
+    private int routeId;
+
+   
+    @Column(name = "train_no", nullable = false)
+    private int trainNo;
+
+ 
+    @Column(name = "station_name")
+    private String station;
+
+    @Column(name = "stop_number")
+    private Integer stopNumber;
+
+    @Column(name = "arrival_time")
+    private String arrivalTime;
+
+    @Column(name = "departure_time")
+    private String departureTime;
+
+    @Column(name = "distance_from_source")
+    private double distanceFromSource;
+
+    // Constructors, Getters, and Setters
+    public TrainRoute() {
+    }
+
+	@Override
+	public String toString() {
+		return "TrainRoute [routeId=" + routeId + ", trainNo=" + trainNo + ", station=" + station + ", stopNumber="
+				+ stopNumber + ", arrivalTime=" + arrivalTime + ", departureTime=" + departureTime
+				+ ", distanceFromSource=" + distanceFromSource + "]";
+	}
+
+	public int getRouteId() {
+		return routeId;
+	}
+
+	public void setRouteId(int routeId) {
+		this.routeId = routeId;
+	}
+
+	public int getTrainNo() {
+		return trainNo;
+	}
+
+	public void setTrainNo(int trainNo) {
+		this.trainNo = trainNo;
+	}
+
+	public String getStation() {
+		return station;
+	}
+
+	public void setStation(String station) {
+		this.station = station;
+	}
+
+	public Integer getStopNumber() {
+		return stopNumber;
+	}
+
+	public void setStopNumber(Integer stopNumber) {
+		this.stopNumber = stopNumber;
+	}
+
+	public String getArrivalTime() {
+		return arrivalTime;
+	}
+
+	public void setArrivalTime(String arrivalTime) {
+		this.arrivalTime = arrivalTime;
+	}
+
+	public String getDepartureTime() {
+		return departureTime;
+	}
+
+	public void setDepartureTime(String departureTime) {
+		this.departureTime = departureTime;
+	}
+
+	public double getDistanceFromSource() {
+		return distanceFromSource;
+	}
+
+	public void setDistanceFromSource(double distanceFromSource) {
+		this.distanceFromSource = distanceFromSource;
+	}
+
+	public TrainRoute(int routeId, int trainNo, String station, Integer stopNumber, String arrivalTime,
+			String departureTime, double distanceFromSource) {
+		super();
+		this.routeId = routeId;
+		this.trainNo = trainNo;
+		this.station = station;
+		this.stopNumber = stopNumber;
+		this.arrivalTime = arrivalTime;
+		this.departureTime = departureTime;
+		this.distanceFromSource = distanceFromSource;
+	}
+
+	public TrainRoute(int trainNo, String station, Integer stopNumber, String arrivalTime, String departureTime,
+			double distanceFromSource) {
+		super();
+		this.trainNo = trainNo;
+		this.station = station;
+		this.stopNumber = stopNumber;
+		this.arrivalTime = arrivalTime;
+		this.departureTime = departureTime;
+		this.distanceFromSource = distanceFromSource;
+	}
+
+	
+    
+}
+
+............................................................................
+
+package com.tcs.Admin.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import com.tcs.Admin.model.Train;
+
+
+
+public interface TrainRepository extends JpaRepository<Train, Integer>{
+	 @Query("SELECT t FROM train_pbl t where trainNo= :trainNo")
+	    Train findTrainsByNo(@Param("trainNo") int trainNo);
+	 
+	 @Query(value = "SELECT SUM(t.TOTAL_AC_SEATS-t.AVAILABLE_AC_SEATS) from train_pbl t",
+			 nativeQuery = true)
+	 int getAllAcTicketsBooked();
+	 
+	 @Query(value = "SELECT SUM(t.TOTAL_SLEEPER_SEATS-T.AVAILABLE_SLEEPER_SEATS) from train_pbl t ",
+			 nativeQuery = true)
+	 int getAllSlTicketsBooked();
+	
+}
+
+..........................................................................
+
+package com.tcs.Admin.repository;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import com.tcs.Admin.model.TrainRoute;
+
+import jakarta.transaction.Transactional;
+
+public interface TrainRouteRepository extends JpaRepository<TrainRoute, Integer> {
+	
+	@Query(value = "SELECT DISTINCT t.train_id, t.train_no, t.train_name, tr1.station_name, tr2.station_name, " +
+            "tr1.arrival_time, tr2.arrival_time, t.TOTAL_AC_SEATS, t.AVAILABLE_AC_SEATS, " +
+            "t.TOTAL_SLEEPER_SEATS, t.AVAILABLE_SLEEPER_SEATS " +
+            "FROM train_pbl t " +
+            "INNER JOIN train_route_pbl tr1 ON t.train_no = tr1.train_no " +
+            "INNER JOIN train_route_pbl tr2 ON t.train_no = tr2.train_no " +
+            "WHERE LOWER(tr1.station_name) = LOWER(:originStationName) " +
+            "  AND LOWER(tr2.station_name) = LOWER(:destinationStationName) " +
+            "  AND tr1.stop_number < tr2.stop_number " +
+            "ORDER BY t.train_no", nativeQuery = true)
+	
+	List<Object[]> findTrainsBetweenStations(
+	 @Param("originStationName") String originStationName,
+	 @Param("destinationStationName") String destinationStationName
+	);
+
+
+
+
+	List<TrainRoute> findByTrainNoOrderByStopNumberAsc(int trainNo);
+
+	@Modifying
+	@Transactional
+	@Query("UPDATE TrainRoute tr SET tr.stopNumber = :stopNumber WHERE tr.routeId = :routeId")
+	int updateTrainRoute(@Param("routeId") int routeId, @Param("stopNumber") Integer stopNumber);
+	
+	
+	@Query(value = "SELECT DISTINCT station_name from train_route_pbl",
+			nativeQuery = true)
+			List<String> getDistinctStations();
+	
+}
+
+....................................................................
+package com.tcs.Admin.service;
+
+
+
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.tcs.Admin.DTO.TrainRouteDTO;
+import com.tcs.Admin.model.TrainRoute;
+import com.tcs.Admin.repository.TrainRouteRepository;
+
+@Service
+public class TrainRouteService {
+
+
+	@Autowired
+	TrainRouteRepository trainRouteRepository;
+	
+	public void deleteTrainRoute(TrainRoute tr) {
+		this.trainRouteRepository.delete(tr);
+	}
+	
+	public TrainRoute updateTrainRoute(TrainRoute tr) {
+		List<TrainRoute> trlist=this.trainRouteRepository.findByTrainNoOrderByStopNumberAsc(tr.getTrainNo());
+		
+		tr.setStopNumber(trlist.size());
+		this.trainRouteRepository.updateTrainRoute(trlist.get(trlist.size()-1).getRouteId(),trlist.size()+1);
+		
+		return this.trainRouteRepository.save(tr);
+	}
+	
+	
+	public void updateTrainRoutes(int trainNo,List<TrainRouteDTO> trainRouteDTO) {
+
+		List<TrainRoute> trlist=this.trainRouteRepository.findByTrainNoOrderByStopNumberAsc(trainNo);
+		
+		if (trlist.size() < 2) {
+	        throw new RuntimeException("Train must have a start and end station.");
+	    }
+		
+		TrainRoute startStation = trlist.get(0); // stopNumber = 1
+	    TrainRoute endStation = trlist.get(trlist.size() - 1); // originally stopNumber = 2
+		
+	 // Step 3: Delete existing intermediate stops (between start and end)
+	    for (int i = 1; i < trlist.size() - 1; i++) {
+	        trainRouteRepository.delete(trlist.get(i));
+	    }
+
+	    // Step 4: Insert new intermediate stops
+	    int stopNumber = 2; // Start after the start station
+	    for (TrainRouteDTO dto : trainRouteDTO) {
+	        TrainRoute route = new TrainRoute();
+	        route.setTrainNo(trainNo);
+	        route.setStation(dto.getStationName());
+	        route.setArrivalTime(dto.getArrivalTime());
+	        route.setDistanceFromSource(dto.getDistanceFromOrigin());
+	        route.setStopNumber(stopNumber++);
+	        trainRouteRepository.save(route);
+	    }
+
+	    // Step 5: Update stop number of the end station to be last
+	    endStation.setStopNumber(stopNumber);
+	    trainRouteRepository.save(endStation);
+	    
+//	    return  ;
+	}
+	
+	private TrainRoute mapper(TrainRouteDTO dto, int trainNo, int stopNumber) {
+	    TrainRoute route = new TrainRoute();
+	    route.setTrainNo(trainNo);
+	    route.setStation(dto.getStationName());
+	    route.setArrivalTime(dto.getArrivalTime());
+	    route.setDistanceFromSource(dto.getDistanceFromOrigin());
+	    route.setStopNumber(stopNumber);
+	    return route;
+	}
+
+
+	
+	public TrainRoute addIntermediateStop(TrainRoute newStop) {
+	    int trainNo = newStop.getTrainNo(); 
+	    List<TrainRoute> routes = trainRouteRepository.findByTrainNoOrderByStopNumberAsc(trainNo);
+
+	    if (routes.size() < 2) {
+	        throw new RuntimeException("Train must have at least a start and end station.");
+	    }
+
+	    // Assume: First = start, Last = end
+	    TrainRoute endStation = routes.get(routes.size() - 1);
+	    
+	    // Shift down end station and any existing intermediate stops (from stopNumber 2 onward)
+	    for (int i = routes.size() - 1; i >= 1; i--) {
+	        TrainRoute tr = routes.get(i);
+	        tr.setStopNumber(tr.getStopNumber() + 1);
+	        trainRouteRepository.save(tr);
+	    }
+
+	    // Set new stopNumber to 2 (i.e., between start and end)
+	    newStop.setStopNumber(2);
+	    return trainRouteRepository.save(newStop);
+	}
+
+	public List<TrainRoute> getTrainRoutesByTrainNo(int trainId){
+		return this.trainRouteRepository.findByTrainNoOrderByStopNumberAsc(trainId);
+		
+	}
+	
+	//insert user 
+		public TrainRoute saveTrainRoute(TrainRoute trainRoute) {
+			return this.trainRouteRepository.save(trainRoute);
+		}
+		
+		//get all distinct stations
+		public List<String> getDistinctStations(){
+			return this.trainRouteRepository.getDistinctStations();
+		}
+		
+		//find all users
+		public List<TrainRoute> getTrainRoutes() {
+			return this.trainRouteRepository.findAll();
+		}
+		
+		public List<TrainRoute> saveTrainRoutes(List<TrainRoute> trainRoutes){
+			return this.trainRouteRepository.saveAll(trainRoutes);
+		}
+	
+}
+
+......................................................................
+package com.tcs.Admin.service;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.tcs.Admin.DTO.TotalSeatsBookedDTO;
+import com.tcs.Admin.model.Train;
+import com.tcs.Admin.model.TrainRoute;
+//import com.tcs.Admin.repository.RouteStationRepository;
+import com.tcs.Admin.repository.TrainRepository;
+import com.tcs.Admin.repository.TrainRouteRepository;
+
+@Service
+public class TrainService {
+
+	@Autowired
+	private TrainRepository trainRepository;
+//
+	@Autowired
+	private TrainRouteRepository trainRouteRepository;
+
+	
+	public Train saveTrain(Train t) {
+		TrainRoute t1=new TrainRoute(t.getTrainNo(),t.getOriginStation(),1,t.getArrivalTime(),t.getArrivalTime()+5,0);
+		TrainRoute t2=new TrainRoute(t.getTrainNo(),t.getDestinationStation(),2,t.getDepartureTime(),t.getDepartureTime()+5,t.getDistance());
+		
+		this.trainRouteRepository.save(t1);
+		this.trainRouteRepository.save(t2);
+		return this.trainRepository.save(t);
+	}
+
+	public TotalSeatsBookedDTO getTotalSeatsBooked() {
+		TotalSeatsBookedDTO ts=new TotalSeatsBookedDTO();
+		ts.setAcSeats(this.trainRepository.getAllAcTicketsBooked());
+		ts.setSlSeats(this.trainRepository.getAllSlTicketsBooked());
+		ts.setTotal(ts.getAcSeats()+ts.getSlSeats());
+		return ts;
+	}
+	
+	
+
+	public List<Object[]> findTrainsBetweenStations(String originStationName, String destinationStationName) {
+		return this.trainRouteRepository.findTrainsBetweenStations(originStationName, destinationStationName);
+	}
+	
+	
+	public Train getTrain(int id) throws Exception {
+		Train output = this.trainRepository.findById(id).orElseThrow(() -> new Exception("please give correct id"));
+		return output;
+	}
+	
+	
+	public Train getTrainByNo(int trainNo) {
+		return this.trainRepository.findTrainsByNo(trainNo);
+	}
+	
+	
+	public List<Train> getTrains() {
+		return this.trainRepository.findAll();
+	}
+
+	public void updateTrain(Train train) throws Exception {
+		if (getTrain(train.getTrainId()) == null) {
+			return;
+		}
+		this.trainRepository.save(train);
+	}
+
+	public void deleteTrain(int id) throws Exception {
+		Train train = getTrain(id);
+		if (train == null) {
+			return;
+		}
+		this.trainRepository.delete(train);
+	}
+}
+
+........................................................................
+
+package com.tcs.Admin.service;
+
+import java.util.List;
+
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+
+import com.tcs.Admin.DTO.UserDTO;
+
+
+
+@FeignClient(name="USER",url="http://localhost:8101")//port address of bill
+public interface UserService {
+	 @GetMapping("/getUsers")
+		public List<UserDTO> getUsers();
+}
+
+..........................................................................
+
+spring.application.name=Admin
+
+
+spring.h2.console.enabled=true
+
+spring.datasource.url= jdbc:h2:mem:trainDB
+
+logging.level.com.tcs.Admin = DEBUG
+
+server.port=8102
+
+#add config to register to the eureka server
+
+
+eureka.instance.prefer-ip-address=false
+eureka.client.register-with-eureka=true
+eureka.client.service-url.defaultzone = http://localhost:8761/eureka
